@@ -3,6 +3,7 @@
  */
 package io.capawesome.capacitorjs.plugins.mlkit.barcodescanning;
 
+import com.getcapacitor.JSObject;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import java.nio.ByteBuffer;
