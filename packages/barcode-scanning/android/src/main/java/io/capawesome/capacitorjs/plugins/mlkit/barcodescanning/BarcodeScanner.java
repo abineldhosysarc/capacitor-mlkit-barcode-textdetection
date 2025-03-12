@@ -343,7 +343,7 @@ public void analyze(@NonNull ImageProxy imageProxy) {
  * Converts an ImageProxy to a Bitmap.
  */
 private Bitmap imageProxyToBitmap(Image image) {
-    ImageProxy.PlaneProxy[] planes = image.getPlanes();
+    Image.Plane[] planes = image.getPlanes();
     ByteBuffer buffer = planes[0].getBuffer();
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
