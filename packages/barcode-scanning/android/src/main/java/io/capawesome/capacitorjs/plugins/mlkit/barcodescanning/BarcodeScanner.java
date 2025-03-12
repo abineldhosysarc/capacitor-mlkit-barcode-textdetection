@@ -313,39 +313,57 @@ public class BarcodeScanner implements ImageAnalysis.Analyzer {
     }
 
     @Override
-    public void analyze(@NonNull ImageProxy imageProxy) {
-        @SuppressLint("UnsafeOptInUsageError")
-        Image image = imageProxy.getImage();
+public void analyze(@NonNull ImageProxy imageProxy) {
+    @SuppressLint("UnsafeOptInUsageError")
+    Image image = imageProxy.getImage();
 
-        if (image == null || barcodeScannerInstance == null) {
-            return;
-        }
-
-        InputImage inputImage = InputImage.fromMediaImage(image, imageProxy.getImageInfo().getRotationDegrees());
-        Point imageSize = new Point(inputImage.getWidth(), inputImage.getHeight());
-        barcodeScannerInstance
-            .process(inputImage)
-            .addOnSuccessListener(barcodes -> {
-                if (scanSettings == null) {
-                    // Scanning stopped while processing the image
-                    return;
-                }
-                List<Barcode> barcodesWithEnoughVotes = voteForBarcodes(barcodes);
-                for (Barcode barcode : barcodesWithEnoughVotes) {
-                    handleScannedBarcode(barcode, imageSize);
-                }
-                if (barcodesWithEnoughVotes.size() > 0) {
-                    handleScannedBarcodes(barcodesWithEnoughVotes.toArray(new Barcode[0]), imageSize);
-                }
-            })
-            .addOnFailureListener(exception -> {
-                handleScanError(exception);
-            })
-            .addOnCompleteListener(task -> {
-                imageProxy.close();
-                image.close();
-            });
+    if (image == null) {
+        imageProxy.close();
+        return;
     }
+
+    // Convert ImageProxy to a Bitmap
+    Bitmap bitmap = imageProxyToBitmap(image);
+
+    // Encode the bitmap as Base64
+    String base64Image = encodeBitmapToBase64(bitmap);
+
+    // Send the Base64 image frame to the frontend
+    sendFrameToFrontend(base64Image);
+
+    imageProxy.close();
+}
+
+/**
+ * Converts an ImageProxy to a Bitmap.
+ */
+private Bitmap imageProxyToBitmap(Image image) {
+    ImageProxy.PlaneProxy[] planes = image.getPlanes();
+    ByteBuffer buffer = planes[0].getBuffer();
+    byte[] bytes = new byte[buffer.remaining()];
+    buffer.get(bytes);
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+}
+
+/**
+ * Encodes a Bitmap to Base64.
+ */
+private String encodeBitmapToBase64(Bitmap bitmap) {
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+    byte[] byteArray = byteArrayOutputStream.toByteArray();
+    return Base64.encodeToString(byteArray, Base64.DEFAULT);
+}
+
+/**
+ * Sends the Base64 image frame to JavaScript via an event.
+ */
+private void sendFrameToFrontend(String base64Image) {
+    JSObject frameData = new JSObject();
+    frameData.put("image", base64Image);
+    plugin.notifyListeners("frameCaptured", frameData);
+}
+
 
     public void handleGoogleBarcodeScannerModuleInstallProgress(
         @ModuleInstallStatusUpdate.InstallState int state,
