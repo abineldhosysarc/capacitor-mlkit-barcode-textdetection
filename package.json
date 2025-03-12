@@ -1,5 +1,5 @@
 {
-  "name": "capacitor-mlkit",
+  "name": "capacitor-mlkitv2",
   "private": true,
   "packageManager": "npm@8.3.0",
   "workspaces": [
