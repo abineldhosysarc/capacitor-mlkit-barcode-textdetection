@@ -445,6 +445,10 @@ public class BarcodeScannerPlugin extends Plugin {
         }
     }
 
+public void sendFrameToJS(JSObject frameData) {
+        notifyListeners("frameCaptured", frameData);
+    }
+
     public void notifyGoogleBarcodeScannerModuleInstallProgressListener(int state, @Nullable Integer progress) {
         try {
             JSObject result = new JSObject();

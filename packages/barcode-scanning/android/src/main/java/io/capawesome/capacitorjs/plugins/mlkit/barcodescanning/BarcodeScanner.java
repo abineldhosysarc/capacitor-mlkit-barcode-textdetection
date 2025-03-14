@@ -98,7 +98,9 @@ public class BarcodeScanner implements ImageAnalysis.Analyzer {
         }
         return camera.getCameraControl();
     }
-
+public void sendFrameToJS(JSObject frameData) {
+plugin.sendFrameToJS(frameData);
+    }
     /**
      * Must run on UI thread.
      */
@@ -319,57 +321,77 @@ public class BarcodeScanner implements ImageAnalysis.Analyzer {
     }
 
     @Override
-public void analyze(@NonNull ImageProxy imageProxy) {
-    @SuppressLint("UnsafeOptInUsageError")
-    Image image = imageProxy.getImage();
+ public void analyze(@NonNull ImageProxy imageProxy) {
+        @SuppressLint("UnsafeOptInUsageError")
+        Image image = imageProxy.getImage();
 
-    if (image == null) {
+        if (image == null) {
+            imageProxy.close();
+            return;
+        }
+
+        // Convert ImageProxy to Bitmap
+        Bitmap bitmap = imageProxyToBitmap(image);
+
+        // Encode the bitmap as Base64
+        String base64Image = encodeBitmapToBase64(bitmap);
+
+        // Send the Base64 image frame to the frontend
+        sendFrameToFrontend(base64Image);
+
         imageProxy.close();
-        return;
     }
 
-    // Convert ImageProxy to a Bitmap
-    Bitmap bitmap = imageProxyToBitmap(image);
-
-    // Encode the bitmap as Base64
-    String base64Image = encodeBitmapToBase64(bitmap);
-
-    // Send the Base64 image frame to the frontend
-    sendFrameToFrontend(base64Image);
-
-    imageProxy.close();
-}
 
 /**
  * Converts an ImageProxy to a Bitmap.
  */
-private Bitmap imageProxyToBitmap(Image image) {
-    Image.Plane[] planes = image.getPlanes();
-    ByteBuffer buffer = planes[0].getBuffer();
-    byte[] bytes = new byte[buffer.remaining()];
-    buffer.get(bytes);
-    return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-}
+private Bitmap imageProxyToBitmap(ImageProxy imageProxy) {
+        Image image = imageProxy.getImage();
+        if (image == null) {
+            Log.e(TAG, "ImageProxy.getImage() returned null");
+            return null;
+        }
 
+        // Convert Image to ByteBuffer
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+
+        // Decode ByteArray to Bitmap
+        return BitmapUtils.convertYUV420ToBitmap(image); // Implement Bitmap conversion utility
+    }
+
+    private void processBarcode(Bitmap bitmap, String base64Image) {
+        // TODO: Replace barcode processing with text recognition logic
+        Log.d(TAG, "Processing barcode or text recognition...");
+    }
 /**
  * Encodes a Bitmap to Base64.
  */
 private String encodeBitmapToBase64(Bitmap bitmap) {
+    if (bitmap == null) {
+        Log.e(TAG, "Bitmap is null, cannot encode");
+        return null;
+    }
+
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
     byte[] byteArray = byteArrayOutputStream.toByteArray();
     return Base64.encodeToString(byteArray, Base64.DEFAULT);
 }
 
+
 /**
  * Sends the Base64 image frame to JavaScript via an event.
  */
-private void sendFrameToFrontend(String base64Image) {
-    JSObject frameData = new JSObject();
-    frameData.put("image", base64Image);
-    plugin.notifyListeners("frameCaptured", frameData);
-}
+ private void sendFrameToFrontend(String base64Image) {
+        JSObject frameData = new JSObject();
+        frameData.put("image", base64Image);
 
+        // ✅ Use the fixed method in the plugin
+        plugin.sendFrameToJS(frameData);
+    }
 
     public void handleGoogleBarcodeScannerModuleInstallProgress(
         @ModuleInstallStatusUpdate.InstallState int state,
